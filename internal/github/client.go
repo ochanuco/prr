@@ -28,12 +28,12 @@ func FetchPRs(repo, state string) ([]PR, error) {
 		return nil, errors.New("-repo is required (e.g., owner/repo)")
 	}
 
-	owne, name, err := splitRepo(repo)
+	owner, name, err := splitRepo(repo)
 	if err != nil {
 		return nil, err
 	}
 
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls?state=%s", owne, name, state)
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls?state=%s&per_page=50", owner, name, state)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
