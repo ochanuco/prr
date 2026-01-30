@@ -1,13 +1,9 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/table"
@@ -107,54 +103,6 @@ func (m model) View() string {
 
 	header := lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("PRs: %s (%s)", m.repo, m.state))
 	return header + "\n\n" + m.table.View() + "\n\n(q to quit)\n"
-}
-
-func fetchPRs(repo, state string) tea.Cmd {
-	return func() tea.Msg {
-		if repo == "" {
-			return errMsg{err: errors.New("-repo is required (format: owner/repo)")}
-		}
-		owner, name, err := splitRepo(repo)
-		if err != nil {
-			return errMsg{err: err}
-		}
-
-		url := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls?state=%s&per_page=50", owner, name, state)
-		req, err := http.NewRequest(http.MethodGet, url, nil)
-		if err != nil {
-			return errMsg{err: err}
-		}
-		req.Header.Set("Accept", "application/vnd.github+json")
-		if token := os.Getenv("GITHUB_TOKEN"); token != "" {
-			req.Header.Set("Authorization", "Bearer "+token)
-		}
-
-		client := &http.Client{Timeout: 10 * time.Second}
-		resp, err := client.Do(req)
-		if err != nil {
-			return errMsg{err: err}
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return errMsg{err: fmt.Errorf("GitHub API error: %s", resp.Status)}
-		}
-
-		var prs []prItem
-		if err := json.NewDecoder(resp.Body).Decode(&prs); err != nil {
-			return errMsg{err: err}
-		}
-
-		return prListMsg(prs)
-	}
-}
-
-func splitRepo(repo string) (string, string, error) {
-	parts := strings.Split(repo, "/")
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return "", "", errors.New("invalid -repo format (expected owner/repo)")
-	}
-	return parts[0], parts[1], nil
 }
 
 func prsToRows(prs []prItem) []table.Row {
